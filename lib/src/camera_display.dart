@@ -86,8 +86,11 @@ class CustomCameraDisplayState extends State<CustomCameraDisplay> {
       allPermissionsAccessed = true;
       cameras = await availableCameras();
       if (!mounted) return;
+      var cam = cameras?[selectedCamera] != null
+          ? cameras![selectedCamera]
+          : cameras![0];
       controller = CameraController(
-        cameras![0],
+        cam,
         ResolutionPreset.high,
         enableAudio: true,
       );
@@ -97,6 +100,16 @@ class CustomCameraDisplayState extends State<CustomCameraDisplay> {
       allPermissionsAccessed = false;
     }
     setState(() {});
+  }
+
+  void switchCamera() {
+    if (cameras != null && cameras!.isNotEmpty) {
+      setState(() {
+        selectedCamera = selectedCamera == 0 ? 1 : 0;
+      });
+
+      _initializeCamera();
+    }
   }
 
   @override
@@ -141,19 +154,47 @@ class CustomCameraDisplayState extends State<CustomCameraDisplay> {
                   width: double.infinity,
                   child: CameraPreview(controller),
                 ),
+                Positioned.fill(
+                    bottom: 0,
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        color:
+                            const Color.fromRGBO(0, 0, 0, 1).withOpacity(0.5),
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            RecordCount(
+                              appTheme: widget.appTheme,
+                              startVideoCount: startVideoCount,
+                              makeProgressRed: widget.redDeleteText,
+                              clearVideoRecord: widget.clearVideoRecord,
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                buildFlashIcons(),
+                                cameraButton(context),
+                                IconButton(
+                                  onPressed: switchCamera,
+                                  icon: const Icon(Icons.flip_camera_android,
+                                      color: Colors.white, size: 30),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ))
               ] else ...[
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: Container(
-                    color: whiteColor,
-                    height: 360,
-                    width: double.infinity,
-                    child: buildCrop(selectedImage),
-                  ),
+                Container(
+                  color: whiteColor,
+                  height: 500,
+                  width: double.infinity,
+                  child: buildCrop(selectedImage),
                 )
               ],
-              buildFlashIcons(),
-              buildPickImageContainer(whiteColor, context),
             ],
           ),
         ),
@@ -161,74 +202,28 @@ class CustomCameraDisplayState extends State<CustomCameraDisplay> {
     );
   }
 
-  Align buildPickImageContainer(Color whiteColor, BuildContext context) {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        height: 270,
-        color: whiteColor,
-        width: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 1.0),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: RecordCount(
-                  appTheme: widget.appTheme,
-                  startVideoCount: startVideoCount,
-                  makeProgressRed: widget.redDeleteText,
-                  clearVideoRecord: widget.clearVideoRecord,
-                ),
-              ),
-            ),
-            const Spacer(),
-            Stack(
-              alignment: Alignment.topCenter,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(60),
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: cameraButton(context),
-                  ),
-                ),
-                Positioned(bottom: 120, child: videoStatusAnimation),
-              ],
-            ),
-            const Spacer(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Align buildFlashIcons() {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: IconButton(
-        onPressed: () {
-          setState(() {
-            currentFlashMode = currentFlashMode == Flash.off
-                ? Flash.auto
-                : (currentFlashMode == Flash.auto ? Flash.on : Flash.off);
-          });
+  Widget buildFlashIcons() {
+    return IconButton(
+      onPressed: () {
+        setState(() {
+          currentFlashMode = currentFlashMode == Flash.off
+              ? Flash.auto
+              : (currentFlashMode == Flash.auto ? Flash.on : Flash.off);
+        });
+        currentFlashMode == Flash.on
+            ? controller.setFlashMode(FlashMode.torch)
+            : currentFlashMode == Flash.off
+                ? controller.setFlashMode(FlashMode.off)
+                : controller.setFlashMode(FlashMode.auto);
+      },
+      icon: Icon(
+        
           currentFlashMode == Flash.on
-              ? controller.setFlashMode(FlashMode.torch)
-              : currentFlashMode == Flash.off
-                  ? controller.setFlashMode(FlashMode.off)
-                  : controller.setFlashMode(FlashMode.auto);
-        },
-        icon: Icon(
-            currentFlashMode == Flash.on
-                ? Icons.flash_on_rounded
-                : (currentFlashMode == Flash.auto
-                    ? Icons.flash_auto_rounded
-                    : Icons.flash_off_rounded),
-            color: Colors.white),
-      ),
+              ? Icons.flash_on_rounded
+              : (currentFlashMode == Flash.auto
+                  ? Icons.flash_auto_rounded
+                  : Icons.flash_off_rounded),
+          color: Colors.white, size: 30,),
     );
   }
 
@@ -251,67 +246,14 @@ class CustomCameraDisplayState extends State<CustomCameraDisplay> {
     return AppBar(
       backgroundColor: whiteColor,
       elevation: 0,
-      leading: IconButton(
+      actions: <Widget>[
+        IconButton(
         icon: Icon(Icons.clear_rounded, color: blackColor, size: 30),
         onPressed: () {
           Navigator.of(context).maybePop(null);
         },
-      ),
-      actions: <Widget>[
-        AnimatedSwitcher(
-          duration: const Duration(seconds: 1),
-          switchInCurve: Curves.easeIn,
-          child: IconButton(
-            icon: const Icon(Icons.arrow_forward_rounded,
-                color: Colors.blue, size: 30),
-            onPressed: () async {
-              if (videoRecordFile != null) {
-                Uint8List byte = await videoRecordFile!.readAsBytes();
-                SelectedByte selectedByte = SelectedByte(
-                  isThatImage: false,
-                  selectedFile: videoRecordFile!,
-                  selectedByte: byte,
-                );
-                SelectedImagesDetails details = SelectedImagesDetails(
-                  multiSelectionMode: false,
-                  selectedFiles: [selectedByte],
-                  aspectRatio: 1.0,
-                );
-                if (!mounted) return;
+      )
 
-                if (widget.callbackFunction != null) {
-                  await widget.callbackFunction!(details);
-                } else {
-                  Navigator.of(context).maybePop(details);
-                }
-              } else if (selectedImage != null) {
-                File? croppedByte = await cropImage(selectedImage);
-                if (croppedByte != null) {
-                  Uint8List byte = await croppedByte.readAsBytes();
-
-                  SelectedByte selectedByte = SelectedByte(
-                    isThatImage: true,
-                    selectedFile: croppedByte,
-                    selectedByte: byte,
-                  );
-
-                  SelectedImagesDetails details = SelectedImagesDetails(
-                    selectedFiles: [selectedByte],
-                    multiSelectionMode: false,
-                    aspectRatio: 1.0,
-                  );
-                  if (!mounted) return;
-
-                  if (widget.callbackFunction != null) {
-                    await widget.callbackFunction!(details);
-                  } else {
-                    Navigator.of(context).maybePop(details);
-                  }
-                }
-              }
-            },
-          ),
-        ),
       ],
     );
   }
@@ -325,7 +267,7 @@ class CustomCameraDisplayState extends State<CustomCameraDisplay> {
     }
     final sample = await ImageCrop.sampleImage(
       file: imageFile,
-      preferredSize: (2000 / scale).round(),
+      preferredSize: (1000 / scale).round(),
     );
     final File file = await ImageCrop.cropImage(
       file: sample,
@@ -336,7 +278,6 @@ class CustomCameraDisplayState extends State<CustomCameraDisplay> {
   }
 
   GestureDetector cameraButton(BuildContext context) {
-    Color whiteColor = widget.appTheme.primaryColor;
     return GestureDetector(
       onTap: widget.enableCamera ? onPress : null,
       onLongPress: widget.enableVideo ? onLongTap : null,
@@ -344,9 +285,9 @@ class CustomCameraDisplayState extends State<CustomCameraDisplay> {
       child: CircleAvatar(
           backgroundColor: Colors.grey[400],
           radius: 40,
-          child: CircleAvatar(
+          child: const CircleAvatar(
             radius: 24,
-            backgroundColor: whiteColor,
+            backgroundColor: Colors.white,
           )),
     );
   }
@@ -356,10 +297,30 @@ class CustomCameraDisplayState extends State<CustomCameraDisplay> {
       if (!widget.selectedVideo) {
         final image = await controller.takePicture();
         File selectedImage = File(image.path);
-        setState(() {
-          widget.selectedCameraImage.value = selectedImage;
-          widget.replacingTabBar(true);
-        });
+        Uint8List byte = await selectedImage.readAsBytes();
+
+        SelectedByte selectedByte = SelectedByte(
+          isThatImage: true,
+          selectedFile: selectedImage,
+          selectedByte: byte,
+        );
+
+        SelectedImagesDetails details = SelectedImagesDetails(
+          selectedFiles: [selectedByte],
+          multiSelectionMode: false,
+          aspectRatio: 1.0,
+        );
+        if (!mounted) return;
+
+        if (widget.callbackFunction != null) {
+          await widget.callbackFunction!(details);
+        } else {
+          Navigator.of(context).maybePop(details);
+        }
+        // setState(() {
+        //   widget.selectedCameraImage.value = selectedImage;
+        //   widget.replacingTabBar(true);
+        // });
       } else {
         setState(() {
           videoStatusAnimation = buildFadeAnimation();
@@ -385,6 +346,24 @@ class CustomCameraDisplayState extends State<CustomCameraDisplay> {
     });
     XFile video = await controller.stopVideoRecording();
     videoRecordFile = File(video.path);
+    Uint8List byte = await videoRecordFile!.readAsBytes();
+    SelectedByte selectedByte = SelectedByte(
+      isThatImage: false,
+      selectedFile: videoRecordFile!,
+      selectedByte: byte,
+    );
+    SelectedImagesDetails details = SelectedImagesDetails(
+      multiSelectionMode: false,
+      selectedFiles: [selectedByte],
+      aspectRatio: 1.0,
+    );
+    if (!mounted) return;
+
+    if (widget.callbackFunction != null) {
+      await widget.callbackFunction!(details);
+    } else {
+      Navigator.of(context).maybePop(details);
+    }
   }
 
   RecordFadeAnimation buildFadeAnimation() {

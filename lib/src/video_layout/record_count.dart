@@ -91,57 +91,61 @@ class RecordCountState extends State<RecordCount>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        LinearProgressIndicator(
-          color: widget.makeProgressRed.value
-              ? Colors.red
-              : widget.appTheme.focusColor,
-          backgroundColor: Colors.transparent,
-          value: progress,
-          minHeight: 3,
-        ),
-        Visibility(
-          visible: widget.startVideoCount.value,
-          maintainSize: true,
-          maintainAnimation: true,
-          maintainState: true,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 30),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedOpacity(
-                  opacity: opacityLevel,
-                  duration: const Duration(seconds: 1),
-                  child: const Icon(Icons.fiber_manual_record_rounded,
-                      color: Colors.red, size: 10),
-                  onEnd: () {
-                    if (isPlaying) {
-                      setState(
-                          () => opacityLevel = opacityLevel == 0 ? 1.0 : 0.0);
-                    }
-                  },
-                ),
-                const SizedBox(width: 5),
-                AnimatedBuilder(
-                  animation: controller,
-                  builder: (context, child) => Text(
-                    countText,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.normal,
-                      color: widget.appTheme.focusColor,
+   // if(progress == 0)return Container();
+    return Container(
+  
+      child: Column(
+     
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LinearProgressIndicator(
+            color: widget.makeProgressRed.value
+                ? Colors.red
+                : widget.appTheme.focusColor,
+            backgroundColor: Colors.transparent,
+            value: progress,
+            minHeight: 3,
+          ),
+         Visibility(
+            visible: widget.startVideoCount.value,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 5, bottom: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedOpacity(
+                    opacity: opacityLevel,
+                    duration: const Duration(seconds: 1),
+                    child: const Icon(Icons.fiber_manual_record_rounded,
+                        color: Colors.red, size: 10),
+                    onEnd: () {
+                      if (isPlaying) {
+                        setState(
+                            () => opacityLevel = opacityLevel == 0 ? 1.0 : 0.0);
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 5),
+                  AnimatedBuilder(
+                    animation: controller,
+                    builder: (context, child) => Text(
+                      countText,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.normal,
+                        color: widget.appTheme.focusColor,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

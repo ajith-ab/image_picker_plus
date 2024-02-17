@@ -325,10 +325,11 @@ class _ImagesViewPageState extends State<ImagesViewPage>
       width: width,
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           existButton(),
-          const Spacer(),
-          doneButton(),
+          // const Spacer(),
+          // doneButton(),
         ],
       ),
     );
@@ -494,10 +495,10 @@ class _ImagesViewPageState extends State<ImagesViewPage>
     );
   }
 
-  Container blurContainer() {
-    return Container(
+  SizedBox blurContainer() {
+    return const SizedBox(
       width: double.infinity,
-      color: const Color.fromARGB(184, 234, 234, 234),
+     // color: const Color.fromARGB(184, 234, 234, 234),
       height: double.maxFinite,
     );
   }
@@ -533,7 +534,7 @@ class _ImagesViewPageState extends State<ImagesViewPage>
     );
   }
 
-  onTapImage(File image, List<File> selectedImagesValue, int index) {
+  onTapImage(File image, List<File> selectedImagesValue, int index) async {
     setState(() {
       if (widget.multiSelectionMode.value) {
         bool close = selectionImageCheck(image, selectedImagesValue, index);
@@ -545,7 +546,37 @@ class _ImagesViewPageState extends State<ImagesViewPage>
       enableVerticalTapping.value = false;
       noPaddingForGridView = true;
     });
+
+            String path = image.path;
+
+            bool isThatVideo = path.contains("mp4", path.length - 5);
+            File? croppedImage = !isThatVideo && widget.cropImage
+                ? await cropImage(image)
+                : null;
+            File img = croppedImage ?? image;
+            Uint8List byte = await img.readAsBytes();
+
+            SelectedByte selectedByte = SelectedByte(
+              isThatImage: !isThatVideo,
+              selectedFile: img,
+              selectedByte: byte,
+            );
+            SelectedImagesDetails details = SelectedImagesDetails(
+              multiSelectionMode: false,
+              aspectRatio: 1,
+              selectedFiles: [selectedByte],
+            );
+            if (!mounted) return;
+
+            if (widget.callbackFunction != null) {
+              await widget.callbackFunction!(details);
+            } else {
+              Navigator.of(context).maybePop(details);
+            }
   }
+
+
+
 
   bool selectionImageCheck(
       File image, List<File> multiSelectionValue, int index,
